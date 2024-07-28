@@ -73,22 +73,26 @@ function viz() {
                 tooltip.transition().duration(500).style("opacity", 0);
             })
             .on("click", (event, d) => {
+                d3.select("#chart2").style("display", "block");
                 updateStateChart(d.date, () => {
                     d3.select("#chart2").node().scrollIntoView({ behavior: "smooth" });
                 });
             });
 
-        const annotations1 = surgeDates.map(d => ({
-            note: { label: d.label, title: formatTime(d.date) },
-            data: { date: d.date, cases: nationalData.find(nd => nd.date.getTime() === d.date.getTime()).cases },
-            x: x1(d.date),
-            y: y1(nationalData.find(nd => nd.date.getTime() === d.date.getTime()).cases),
-            dy: -50,
-            dx: -50
-        }));
+        // Adding annotations for national surge dates
+        const makeAnnotations = d3.annotation()
+            .type(d3.annotationLabel)
+            .annotations(surgeDates.map(surge => ({
+                note: { label: surge.label, title: formatTime(surge.date) },
+                x: x1(surge.date),
+                y: y1(nationalData.find(d => d.date.getTime() === surge.date.getTime()).cases),
+                dy: -50,
+                dx: -50
+            })));
 
-        const makeAnnotations1 = d3.annotation().annotations(annotations1);
-        svg1.append("g").attr("class", "annotation-group").call(makeAnnotations1);
+        svg1.append("g")
+            .attr("class", "annotation-group")
+            .call(makeAnnotations);
 
         function updateStateChart(selectedDate, callback) {
             d3.csv(stateDataURL, d => ({
@@ -125,21 +129,13 @@ function viz() {
                     .enter().append("rect")
                     .attr("class", "bar")
                     .attr("x", d => x2(d.state))
-                    .attr("y", d => y2(d.cases))
                     .attr("width", x2.bandwidth())
+                    .attr("y", d => y2(d.cases))
                     .attr("height", d => height - y2(d.cases))
                     .attr("fill", "steelblue")
-                    .on("mouseover", (event, d) => {
-                        tooltip.transition().duration(200).style("opacity", .9);
-                        tooltip.html(`${d.state}<br/>Cases: ${formatComma(d.cases)}`)
-                            .style("left", (event.pageX + 5) + "px")
-                            .style("top", (event.pageY - 28) + "px");
-                    })
-                    .on("mouseout", (event, d) => {
-                        tooltip.transition().duration(500).style("opacity", 0);
-                    })
                     .on("click", (event, d) => {
-                        updateStateTimeChart(selectedDate, d.state, () => {
+                        d3.select("#chart3").style("display", "block");
+                        updateTimeSeriesChart(d.state, () => {
                             d3.select("#chart3").node().scrollIntoView({ behavior: "smooth" });
                         });
                     });
@@ -153,21 +149,19 @@ function viz() {
                     .style("text-decoration", "underline");
 
                 if (callback) callback();
-            }).catch(error => {
-                console.error('Error loading state CSV file:', error);
             });
         }
 
-        function updateStateTimeChart(selectedDate, selectedState, callback) {
+        function updateTimeSeriesChart(state, callback) {
             d3.csv(stateDataURL, d => ({
                 date: parseTime(d.date),
                 state: d.state,
                 cases: +d.cases,
                 deaths: +d.deaths
             })).then(stateData => {
-                const stateFilteredData = stateData.filter(d => d.state === selectedState);
+                const filteredData = stateData.filter(d => d.state === state);
 
-                const margin = { top: 50, right: 30, bottom: 100, left: 70 },
+                const margin = { top: 50, right: 30, bottom: 30, left: 60 },
                     width = 960 - margin.left - margin.right,
                     height = 500 - margin.top - margin.bottom;
 
@@ -175,18 +169,18 @@ function viz() {
 
                 const svg3 = d3.select("#chart3").append("svg")
                     .attr("width", width + margin.left + margin.right)
-                    .attr("height", height + margin.top + margin.bottom + 50)  // Increase the height to accommodate the button
+                    .attr("height", height + margin.top + margin.bottom)
                     .append("g")
                     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-                const x3 = d3.scaleTime().domain(d3.extent(stateFilteredData, d => d.date)).range([0, width]);
-                const y3 = d3.scaleLinear().domain([0, d3.max(stateFilteredData, d => d.cases)]).range([height, 0]);
+                const x3 = d3.scaleTime().domain(d3.extent(filteredData, d => d.date)).range([0, width]);
+                const y3 = d3.scaleLinear().domain([0, d3.max(filteredData, d => d.cases)]).range([height, 0]);
 
                 svg3.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x3));
                 svg3.append("g").call(d3.axisLeft(y3));
 
                 svg3.append("path")
-                    .datum(stateFilteredData)
+                    .datum(filteredData)
                     .attr("fill", "none")
                     .attr("stroke", "steelblue")
                     .attr("stroke-width", 1.5)
@@ -196,12 +190,28 @@ function viz() {
                     .attr("transform", `translate(${(width / 2)}, ${-margin.top / 2})`)
                     .attr("class", "title")
                     .attr("text-anchor", "middle")
-                    .text(`Covid-19 Cases Over Time for ${selectedState}`)
+                    .text(`Covid-19 Cases Over Time in ${state}`)
                     .style("font-size", "18px")
                     .style("text-decoration", "underline");
 
+                const makeAnnotations = d3.annotation()
+                    .type(d3.annotationLabel)
+                    .annotations(surgeDates.map(surge => ({
+                        note: { label: surge.label, title: formatTime(surge.date) },
+                        x: x3(surge.date),
+                        y: y3(filteredData.find(d => d.date.getTime() === surge.date.getTime()).cases),
+                        dy: -50,
+                        dx: -50
+                    })));
+
+                svg3.append("g")
+                    .attr("class", "annotation-group")
+                    .call(makeAnnotations);
+
+                const tooltip = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+
                 svg3.selectAll("dot")
-                    .data(stateFilteredData)
+                    .data(filteredData)
                     .enter().append("circle")
                     .attr("r", 4)
                     .attr("cx", d => x3(d.date))
@@ -216,18 +226,6 @@ function viz() {
                     .on("mouseout", (event, d) => {
                         tooltip.transition().duration(500).style("opacity", 0);
                     });
-
-                const annotations3 = surgeDates.map(d => ({
-                    note: { label: d.label, title: formatTime(d.date) },
-                    data: { date: d.date, cases: stateFilteredData.find(sd => sd.date.getTime() === d.date.getTime()).cases },
-                    x: x3(d.date),
-                    y: y3(stateFilteredData.find(sd => sd.date.getTime() === d.date.getTime()).cases),
-                    dy: -50,
-                    dx: -50
-                }));
-
-                const makeAnnotations3 = d3.annotation().annotations(annotations3);
-                svg3.append("g").attr("class", "annotation-group").call(makeAnnotations3);
 
                 svg3.append("foreignObject")
                     .attr("x", width - 60)
@@ -248,15 +246,9 @@ function viz() {
                     });
 
                 if (callback) callback();
-            }).catch(error => {
-                console.error('Error loading state CSV file:', error);
             });
         }
-
-        updateStateChart(nationalData[nationalData.length - 1].date);
-    }).catch(error => {
-        console.error('Error loading national CSV file:', error);
     });
 }
 
-window.onload = viz;
+viz();
