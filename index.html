@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Covid-19 Narrative Visualization</title>
+    <style>
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 100px;
+            height: 50px;
+            padding: 5px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .title {
+            fill: black;
+            font-size: 18px;
+            text-anchor: middle;
+            text-decoration: underline;
+        }
+
+        button {
+            margin-top: 20px;
+            background-color: steelblue;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: darkblue;
+        }
+
+        #main-title {
+            text-align: center;
+            color: steelblue;
+            font-size: 24px;
+        }
+
+        .dotted-line {
+            stroke: steelblue;
+            stroke-dasharray: 3, 3;
+            stroke-width: 1.5;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="main-title">Covid-19 Cases in the U.S.: A Deep Dive from National to State Levels Over Time</h1>
+    <div id="chart1"></div>
+    <div id="chart2"></div>
+    <div id="chart3"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
